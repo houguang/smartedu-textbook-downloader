@@ -3,6 +3,9 @@ import { defineConfig } from "wxt";
 
 export default defineConfig({
   modules: ["@wxt-dev/module-vue"],
+  suppressWarnings: {
+    firefoxDataCollection: true,
+  },
   vite: () => ({
     plugins: [tailwindcss()],
   }),
@@ -31,6 +34,14 @@ export default defineConfig({
       32: "icon/32.png",
       48: "icon/48.png",
       128: "icon/128.png",
+    },
+    browser_specific_settings: {
+      gecko: {
+        id: "smartedu-textbook-downloader@houguang",
+        data_collection_permissions: {
+          required: ["none"],
+        },
+      },
     },
   },
 });
