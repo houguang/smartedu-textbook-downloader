@@ -1,0 +1,29 @@
+{
+  "name": "smartedu-textbook-downloader",
+  "description": "国家中小学智慧教育平台电子教材批量下载（仅供个人学习）",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "compile": "vue-tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "vue": "^3.5.29"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.12",
+    "@wxt-dev/module-vue": "^1.0.3",
+    "tailwindcss": "^4.1.12",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.5",
+    "vue-tsc": "^3.2.5",
+    "wxt": "^0.21.3"
+  }
+}
