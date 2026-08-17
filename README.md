@@ -1,8 +1,20 @@
 # 智慧教育平台教材下载
 
+<img src="assets/icon.png" width="96" height="96" alt="教材下载" />
+
 Chrome 扩展：在独立 Options 页面按学段、年级、学科、版本浏览并批量下载[国家中小学智慧教育平台](https://basic.smartedu.cn/tchMaterial/)电子教材。
 
 基于 [WXT](https://wxt.dev) + Vue 3 + Tailwind CSS。下载原理参考 [tchMaterial-parser](https://github.com/happycola233/tchMaterial-parser)：读取平台公开的教材目录 JSON，再用登录后的 `X-ND-AUTH` 从私有 CDN 拉取 PDF / 配套音频。
+
+## 截图
+
+主界面：按分类筛选教材、勾选后批量下载，支持在线查看。
+
+![主界面](docs/screenshot.png)
+
+下载队列：显示总体进度与每本教材的完成状态。
+
+![下载队列](docs/screenshot-download.png)
 
 ## 使用方法
 
