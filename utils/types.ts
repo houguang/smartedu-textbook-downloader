@@ -43,18 +43,80 @@ export interface TextbookDetail {
   chapters: Chapter[];
 }
 
-export type QueueStatus = "pending" | "running" | "done" | "error";
+export type QueueStatus = "pending" | "running" | "done" | "error" | "cancelled";
 
 export interface QueueItem {
   id: string;
   bookId: string;
   title: string;
-  kind: "pdf" | "audio";
+  kind: "pdf" | "audio" | "lesson";
   filename: string;
   status: QueueStatus;
   progress: number;
   error?: string;
   downloadId?: number;
+}
+
+export interface LessonFile {
+  id: string;
+  title: string;
+  alias: string;
+  file: ResourceFile;
+}
+
+export type LessonResourceKind = "pdf" | "video" | "other";
+
+export interface LessonResource {
+  id: string;
+  title: string;
+  alias: string;
+  kind: LessonResourceKind;
+  downloadable: boolean;
+  file?: ResourceFile;
+}
+
+export interface LessonDetail {
+  id: string;
+  title: string;
+  bookId: string;
+  bookTitle: string;
+  tags: TagInfo[];
+  tagMap: Record<string, TagInfo>;
+  files: LessonFile[];
+  resources: LessonResource[];
+}
+
+export interface ClassActivityRef {
+  activityId: string;
+  teachingmaterialId: string | null;
+  chapterId: string | null;
+}
+
+export interface BookLessonRef {
+  id: string;
+  title: string;
+  chapterIds: string[];
+  chapterTitles: string[];
+}
+
+export interface BookOutlineLesson {
+  id: string;
+  title: string;
+  chapterIds: string[];
+  chapterTitles: string[];
+  detail: LessonDetail | null;
+  error?: string;
+}
+
+export interface BookUnit {
+  id: string;
+  title: string;
+  lessons: BookOutlineLesson[];
+}
+
+export interface BookOutline {
+  bookId: string;
+  units: BookUnit[];
 }
 
 export interface AppSettings {
@@ -68,6 +130,7 @@ export const DIMENSIONS = {
   subject: "zxxxk",
   edition: "zxxbb",
   volume: "zxxcc",
+  oldNew: "zxxxjjc",
 } as const;
 
 export const STAGE_ORDER = [
@@ -93,6 +156,8 @@ export const GRADE_ORDER = [
   "高三",
 ];
 export const VOLUME_ORDER = ["上册", "下册", "全一册"];
+export const OLD_NEW_ORDER = ["新教材", "旧教材"];
 
 export const LOGIN_URL = "https://basic.smartedu.cn/tchMaterial";
+export const CLASSROOM_URL = "https://basic.smartedu.cn/syncClassroom";
 export const AUTH_URL = "https://auth.smartedu.cn/uias/login";

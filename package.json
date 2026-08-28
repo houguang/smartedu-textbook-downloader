@@ -2,7 +2,7 @@
   "name": "smartedu-textbook-downloader",
   "description": "国家中小学智慧教育平台电子教材批量下载（仅供个人学习）",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.11",
   "type": "module",
   "scripts": {
     "dev": "wxt",

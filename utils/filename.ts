@@ -1,4 +1,4 @@
-import { DIMENSIONS, type Textbook } from "./types";
+import { DIMENSIONS, type LessonDetail, type Textbook } from "./types";
 
 const INVALID = /[\\/:*?"<>|]/g;
 
@@ -25,6 +25,18 @@ export function bookFolderPath(book: Textbook): string {
   ]);
 }
 
+export function lessonFolderPath(detail: LessonDetail, chapterTitles: string[] = []): string {
+  const chapters = chapterTitles.filter((name) => name && name !== detail.title);
+  return buildFilterFolder([
+    detail.tagMap[DIMENSIONS.stage]?.name,
+    detail.tagMap[DIMENSIONS.subject]?.name,
+    detail.tagMap[DIMENSIONS.edition]?.name,
+    detail.bookTitle,
+    ...chapters,
+    detail.title,
+  ]);
+}
+
 export function buildDownloadPath(name: string, ext: string, folder = ""): string {
   const file = `${sanitizeName(name)}.${ext.replace(/^\./, "")}`;
   return folder ? `${folder}/${file}` : file;
@@ -32,4 +44,10 @@ export function buildDownloadPath(name: string, ext: string, folder = ""): strin
 
 export function downloadBasename(path: string): string {
   return path.split("/").pop() || path;
+}
+
+export function folderFromDownloadPath(path: string): string {
+  const parts = path.split("/");
+  if (parts.length <= 1) return "";
+  return parts.slice(0, -1).join("/");
 }

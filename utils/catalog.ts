@@ -1,8 +1,11 @@
-import { DIMENSIONS, GRADE_ORDER, STAGE_ORDER, VOLUME_ORDER, type TagInfo, type Textbook } from "./types";
+import { fetchJsonWithFallback, withFileCdnHosts } from "./api";
+import { DIMENSIONS, GRADE_ORDER, OLD_NEW_ORDER, STAGE_ORDER, VOLUME_ORDER, type TagInfo, type Textbook } from "./types";
 
 const TAGS_URL = "https://s-file-1.ykt.cbern.com.cn/zxx/ndrs/tags/tch_material_tag.json";
 const VERSION_URL =
   "https://s-file-1.ykt.cbern.com.cn/zxx/ndrs/resources/tch_material/version/data_version.json";
+const LESSON_TAGS_PATH = "/zxx/ndrs/tags/national_lesson_tag.json";
+const LESSON_VERSION_PATH = "/zxx/ndrs/national_lesson/teachingmaterials/version/data_version.json";
 
 interface RawTagNode {
   tag_id?: string;
@@ -33,6 +36,7 @@ export interface FilterState {
   subject: string | null;
   edition: string | null;
   volume: string | null;
+  oldNew: string | null;
 }
 
 function zhTitle(value: RawBook["global_title"] | string | undefined, fallback = ""): string {
@@ -73,7 +77,9 @@ export function sortTagNames(names: string[], dimension: string): string[] {
         ? GRADE_ORDER
         : dimension === DIMENSIONS.volume
           ? VOLUME_ORDER
-          : [];
+          : dimension === DIMENSIONS.oldNew
+            ? OLD_NEW_ORDER
+            : [];
   return [...names].sort((a, b) => compareByOrder(a, b, preferred));
 }
 
@@ -112,28 +118,33 @@ export function normalizeTextbook(raw: RawBook, catalogTags?: Map<string, TagInf
   return { id, title, cover, tags, tagMap };
 }
 
-export async function fetchCatalog(): Promise<{ books: Textbook[]; tagMap: Map<string, TagInfo> }> {
-  const [tagsRes, versionRes] = await Promise.all([fetch(TAGS_URL), fetch(VERSION_URL)]);
-  if (!tagsRes.ok) throw new Error(`分类接口失败 HTTP ${tagsRes.status}`);
-  if (!versionRes.ok) throw new Error(`教材列表版本接口失败 HTTP ${versionRes.status}`);
+function parseVersionUrls(urls: unknown): string[] {
+  if (Array.isArray(urls)) {
+    return urls.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof urls === "string") {
+    return urls.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
 
-  const tagsJson = (await tagsRes.json()) as { hierarchies?: RawTagNode[] };
+async function fetchCatalogFrom(
+  tagsUrl: string,
+  versionUrl: string,
+  emptyMessage: string,
+): Promise<{ books: Textbook[]; tagMap: Map<string, TagInfo> }> {
+  const [tagsJson, versionJson] = await Promise.all([
+    fetchJsonWithFallback<{ hierarchies?: RawTagNode[] }>(withFileCdnHosts(tagsUrl)),
+    fetchJsonWithFallback<{ urls?: unknown }>(withFileCdnHosts(versionUrl)),
+  ]);
   const tagMap = new Map<string, TagInfo>();
   walkTags(tagsJson.hierarchies, tagMap);
 
-  const versionJson = (await versionRes.json()) as { urls?: string };
-  const urls = (versionJson.urls || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (!urls.length) throw new Error("教材列表地址为空");
+  const urls = parseVersionUrls(versionJson.urls);
+  if (!urls.length) throw new Error(emptyMessage);
 
   const parts = await Promise.all(
-    urls.map(async (url) => {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`教材分片失败 HTTP ${response.status}`);
-      return (await response.json()) as RawBook[];
-    }),
+    urls.map((url) => fetchJsonWithFallback<RawBook[]>(withFileCdnHosts(url))),
   );
 
   const books: Textbook[] = [];
@@ -149,6 +160,14 @@ export async function fetchCatalog(): Promise<{ books: Textbook[]; tagMap: Map<s
   return { books, tagMap };
 }
 
+export async function fetchCatalog(): Promise<{ books: Textbook[]; tagMap: Map<string, TagInfo> }> {
+  return fetchCatalogFrom(TAGS_URL, VERSION_URL, "教材列表地址为空");
+}
+
+export async function fetchLessonCatalog(): Promise<{ books: Textbook[]; tagMap: Map<string, TagInfo> }> {
+  return fetchCatalogFrom(LESSON_TAGS_PATH, LESSON_VERSION_PATH, "课程教学列表地址为空");
+}
+
 export function emptyFilters(): FilterState {
   return {
     stage: null,
@@ -156,6 +175,7 @@ export function emptyFilters(): FilterState {
     subject: null,
     edition: null,
     volume: null,
+    oldNew: null,
   };
 }
 
@@ -174,6 +194,7 @@ export function applyDefaultTag(
     if (tag.dimension === DIMENSIONS.subject) next.subject = tag.id;
     if (tag.dimension === DIMENSIONS.edition) next.edition = tag.id;
     if (tag.dimension === DIMENSIONS.volume) next.volume = tag.id;
+    if (tag.dimension === DIMENSIONS.oldNew) next.oldNew = tag.id;
   }
   return next;
 }
@@ -213,12 +234,24 @@ export function applyPreferredFilters(
   return next;
 }
 
+export function applyPreferredLessonFilters(
+  books: Textbook[],
+  tagMap: Map<string, TagInfo>,
+  current: FilterState,
+): FilterState {
+  const next = applyPreferredFilters(books, tagMap, current);
+  const id = findTagId(DIMENSIONS.oldNew, "新教材", tagMap, books);
+  if (id) next.oldNew = id;
+  return next;
+}
+
 export function bookMatches(book: Textbook, filters: FilterState): boolean {
   if (filters.stage && book.tagMap[DIMENSIONS.stage]?.id !== filters.stage) return false;
   if (filters.grade && book.tagMap[DIMENSIONS.grade]?.id !== filters.grade) return false;
   if (filters.subject && book.tagMap[DIMENSIONS.subject]?.id !== filters.subject) return false;
   if (filters.edition && book.tagMap[DIMENSIONS.edition]?.id !== filters.edition) return false;
   if (filters.volume && book.tagMap[DIMENSIONS.volume]?.id !== filters.volume) return false;
+  if (filters.oldNew && book.tagMap[DIMENSIONS.oldNew]?.id !== filters.oldNew) return false;
   return true;
 }
 
@@ -232,6 +265,8 @@ function parentScope(filters: FilterState, dimension: string): FilterState {
   scoped.edition = filters.edition;
   if (dimension === DIMENSIONS.grade) return scoped;
   scoped.grade = filters.grade;
+  if (dimension === DIMENSIONS.volume) return scoped;
+  scoped.volume = filters.volume;
   return scoped;
 }
 
@@ -264,8 +299,22 @@ export function pruneFilters(books: Textbook[], filters: FilterState): void {
   filters.edition = keep(DIMENSIONS.edition, filters.edition);
   filters.grade = keep(DIMENSIONS.grade, filters.grade);
   filters.volume = keep(DIMENSIONS.volume, filters.volume);
+  filters.oldNew = keep(DIMENSIONS.oldNew, filters.oldNew);
 }
 
 export function tagLabel(book: Textbook, dimension: string): string {
   return book.tagMap[dimension]?.name || "";
+}
+
+export function classroomDefaultTag(book: Textbook): string {
+  return [
+    book.tagMap[DIMENSIONS.stage]?.id,
+    book.tagMap[DIMENSIONS.grade]?.id,
+    book.tagMap[DIMENSIONS.subject]?.id,
+    book.tagMap[DIMENSIONS.edition]?.id,
+    book.tagMap[DIMENSIONS.volume]?.id,
+    book.tagMap[DIMENSIONS.oldNew]?.id,
+  ]
+    .filter(Boolean)
+    .join("/");
 }

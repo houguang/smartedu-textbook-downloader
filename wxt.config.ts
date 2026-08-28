@@ -11,8 +11,8 @@ export default defineConfig({
   }),
   manifest: {
     name: "智慧教育平台教材下载",
-    description: "按分类筛选并批量下载智慧教育平台电子教材，支持在线预览，仅供个人学习。",
-    version: "0.1.0",
+    description: "按分类筛选并批量下载智慧教育平台电子教材与课程教学 PDF，支持在线预览，仅供个人学习。",
+    version: "0.1.11",
     permissions: ["storage", "downloads", "tabs"],
     host_permissions: [
       "https://basic.smartedu.cn/*",

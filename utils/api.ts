@@ -1,4 +1,5 @@
 import { buildNdAuth } from "./auth";
+import { checkpoint, isCancelledError } from "./download-control";
 import type { Chapter, ResourceFile, TextbookDetail, TokenCredentials } from "./types";
 
 const PRIVATE_CDN = "https://r1-ndr-private.ykt.cbern.com.cn";
@@ -9,7 +10,7 @@ const AUDIO_URL = (id: string) =>
 const TREE_URL = (ebookId: string) =>
   `https://s-file-1.ykt.cbern.com.cn/zxx/ndrv2/national_lesson/trees/${ebookId}.json`;
 
-interface TiItem {
+export interface TiItem {
   ti_file_flag?: string;
   ti_format?: string;
   ti_is_source_file?: boolean;
@@ -26,7 +27,7 @@ interface RawDetail {
   ti_items?: TiItem[];
 }
 
-function zhText(value: Record<string, string> | string | undefined, fallback: string): string {
+export function zhText(value: Record<string, string> | string | undefined, fallback: string): string {
   if (!value) return fallback;
   if (typeof value === "string") return value;
   return value["zh-CN"] || value["en"] || Object.values(value)[0] || fallback;
@@ -83,11 +84,13 @@ export async function fetchBinary(
   url: string,
   credentials: TokenCredentials | null,
   onProgress?: (ratio: number) => void,
+  signal?: AbortSignal,
 ): Promise<ArrayBuffer> {
   const headers = await signedHeaders(url, credentials);
   const response = await fetch(url, {
     headers,
     referrer: "https://basic.smartedu.cn/",
+    signal,
   });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
@@ -96,20 +99,30 @@ export async function fetchBinary(
     }
     throw new Error(`下载失败 HTTP ${response.status}`);
   }
-  if (!onProgress || !response.body) return await response.arrayBuffer();
+  if (!response.body) return await response.arrayBuffer();
 
   const total = Number(response.headers.get("content-length") || 0);
   const reader = response.body.getReader();
+  const onAbort = () => {
+    void reader.cancel().catch(() => undefined);
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
   const chunks: Uint8Array[] = [];
   let received = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      received += value.byteLength;
-      if (total) onProgress(Math.min(0.99, received / total));
+  try {
+    while (true) {
+      await checkpoint();
+      if (signal?.aborted) throw new DOMException("已取消下载", "AbortError");
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        chunks.push(value);
+        received += value.byteLength;
+        if (total) onProgress?.(Math.min(0.99, received / total));
+      }
     }
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
   }
   const output = new Uint8Array(received);
   let offset = 0;
@@ -117,7 +130,7 @@ export async function fetchBinary(
     output.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  onProgress(1);
+  onProgress?.(1);
   return output.buffer;
 }
 
@@ -125,19 +138,21 @@ async function fetchBinaryWithFallback(
   urls: string[],
   credentials: TokenCredentials | null,
   onProgress?: (ratio: number) => void,
+  signal?: AbortSignal,
 ): Promise<ArrayBuffer> {
   let lastError: unknown;
   for (const url of urls) {
     try {
-      return await fetchBinary(url, credentials, onProgress);
+      return await fetchBinary(url, credentials, onProgress, signal);
     } catch (error) {
+      if (isCancelledError(error)) throw error;
       lastError = error;
     }
   }
   throw lastError instanceof Error ? lastError : new Error("所有镜像均下载失败");
 }
 
-function toResource(title: string, item: TiItem, format = "pdf"): ResourceFile | undefined {
+export function toResource(title: string, item: TiItem, format = "pdf"): ResourceFile | undefined {
   const storage = resolveStorage(item);
   if (!storage) return undefined;
   return {
@@ -313,3 +328,25 @@ export async function fetchPdfViewUrl(
 }
 
 export { fetchBinaryWithFallback };
+
+const FILE_CDN_HOSTS = ["s-file-1", "s-file-2", "s-file-3"];
+
+export function withFileCdnHosts(path: string): string[] {
+  const normalized = path.replace(/^https:\/\/s-file-\d\.ykt\.cbern\.com\.cn/i, "");
+  return FILE_CDN_HOSTS.map((host) => `https://${host}.ykt.cbern.com.cn${normalized}`);
+}
+
+export async function fetchJsonWithFallback<T>(
+  urls: string[],
+  credentials?: TokenCredentials | null,
+): Promise<T> {
+  let lastError: unknown;
+  for (const url of urls) {
+    try {
+      return await fetchJson<T>(url, credentials);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("接口请求失败");
+}
