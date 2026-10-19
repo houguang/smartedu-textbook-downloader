@@ -4,6 +4,7 @@ import BookCard from "../../components/BookCard.vue";
 import DownloadQueue from "../../components/DownloadQueue.vue";
 import FilterGroup from "../../components/FilterGroup.vue";
 import LessonBookView from "../../components/LessonBookView.vue";
+import PrintMaterialsView from "../../components/PrintMaterialsView.vue";
 import { fetchPdfViewUrl } from "../../utils/api";
 import { isLoggedIn } from "../../utils/auth";
 import {
@@ -60,7 +61,7 @@ import {
   type TokenCredentials,
 } from "../../utils/types";
 
-const activeTab = ref<"textbook" | "lesson">("textbook");
+const activeTab = ref<"textbook" | "lesson" | "materials">("textbook");
 const loading = ref(true);
 const lessonLoading = ref(true);
 const textbookError = ref("");
@@ -91,6 +92,7 @@ const selectedResourceTypes = ref(new Set<string>());
 const outlineCache = new Map<string, BookOutline>();
 
 const isLessonTab = computed(() => activeTab.value === "lesson");
+const isMaterialsTab = computed(() => activeTab.value === "materials");
 const catalogError = computed(() => (isLessonTab.value ? lessonError.value : textbookError.value));
 const catalogBooks = computed(() => (isLessonTab.value ? lessonBooks.value : books.value));
 const catalogLoading = computed(() => (isLessonTab.value ? lessonLoading.value : loading.value));
@@ -581,11 +583,11 @@ onUnmounted(() => {
         <p class="text-sm text-slate-500">仅供个人学习与教学参考，请勿商用或二次分发</p>
       </div>
       <div class="ml-auto flex items-center justify-end gap-3">
-        <label v-if="!isLessonTab" class="flex items-center gap-1.5 text-sm text-slate-600">
+        <label v-if="activeTab === 'textbook'" class="flex items-center gap-1.5 text-sm text-slate-600">
           <input v-model="addBookmarks" class="h-4 w-4 accent-blue-600" type="checkbox" @change="persistSettings" />
           PDF 书签
         </label>
-        <label v-if="!isLessonTab" class="flex items-center gap-1.5 text-sm text-slate-600">
+        <label v-if="activeTab === 'textbook'" class="flex items-center gap-1.5 text-sm text-slate-600">
           <input v-model="downloadAudio" class="h-4 w-4 accent-blue-600" type="checkbox" @change="persistSettings" />
           配套音频
         </label>
@@ -613,7 +615,7 @@ onUnmounted(() => {
           </button>
         </template>
         <button
-          v-else
+          v-else-if="!isMaterialsTab"
           class="rounded-lg bg-blue-600 px-4 py-2 text-base font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           type="button"
           :disabled="showingBookResources ? !selectedLessonPdfCount : !selectedBooks.length"
@@ -652,8 +654,8 @@ onUnmounted(() => {
       <div class="flex min-h-0 shrink-0 border-r border-slate-200 bg-white">
         <nav class="flex w-14 shrink-0 flex-col items-stretch gap-1 bg-slate-800 px-1 py-3">
           <button
-            class="flex flex-col items-center gap-1 rounded-md px-0.5 py-2 text-[11px] font-medium leading-tight"
-            :class="!isLessonTab ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'"
+            class="flex flex-col items-center gap-1 rounded-md border border-transparent px-0.5 py-2 text-[11px] font-medium leading-tight transition-colors duration-300 ease-out"
+            :class="activeTab === 'textbook' ? 'border-blue-600 bg-blue-600 text-white' : 'text-slate-300 hover:border-slate-700 hover:bg-slate-700 hover:text-white'"
             type="button"
             @click="activeTab = 'textbook'"
           >
@@ -663,8 +665,8 @@ onUnmounted(() => {
             <span class="w-[2em] text-center">教材</span>
           </button>
           <button
-            class="flex flex-col items-center gap-1 rounded-md px-0.5 py-2 text-[11px] font-medium leading-tight"
-            :class="isLessonTab ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'"
+            class="flex flex-col items-center gap-1 rounded-md border border-transparent px-0.5 py-2 text-[11px] font-medium leading-tight transition-colors duration-300 ease-out"
+            :class="isLessonTab ? 'border-blue-600 bg-blue-600 text-white' : 'text-slate-300 hover:border-slate-700 hover:bg-slate-700 hover:text-white'"
             type="button"
             @click="activeTab = 'lesson'"
           >
@@ -673,8 +675,19 @@ onUnmounted(() => {
             </svg>
             <span class="w-[2em] text-center">课程教学</span>
           </button>
+          <button
+            class="mt-1 flex flex-col items-center gap-1 rounded-md border bg-clip-padding px-0.5 py-2 text-[11px] font-medium leading-tight transition-colors duration-300 ease-out"
+            :class="isMaterialsTab ? 'border-violet-600 bg-violet-600 text-white' : 'border-violet-500/25 bg-violet-500/25 text-violet-100 hover:border-violet-500/45 hover:bg-violet-500/45 hover:text-white'"
+            type="button"
+            @click="activeTab = 'materials'"
+          >
+            <svg class="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Z" />
+            </svg>
+            <span class="w-[2em] text-center">打印素材</span>
+          </button>
         </nav>
-        <aside class="w-72 space-y-6 overflow-y-auto px-4 py-5">
+        <aside v-if="!isMaterialsTab" class="w-72 space-y-6 overflow-y-auto px-4 py-5">
           <FilterGroup v-if="!isLessonTab" v-model="filters.stage" title="学段" :tags="stageTags" />
           <FilterGroup v-else v-model="lessonFilters.stage" title="学段" :tags="stageTags" />
           <FilterGroup v-if="!isLessonTab" v-model="filters.subject" title="学科" :tags="subjectTags" />
@@ -689,7 +702,8 @@ onUnmounted(() => {
         </aside>
       </div>
 
-      <main class="flex min-w-0 flex-1 flex-col">
+      <PrintMaterialsView v-if="isMaterialsTab" />
+      <main v-else class="flex min-w-0 flex-1 flex-col">
         <p v-if="actionError" class="border-b border-red-100 bg-red-50 px-5 py-2 text-sm text-red-700">{{ actionError }}</p>
         <LessonBookView
           v-if="openedBook && isLessonTab"
@@ -746,6 +760,7 @@ onUnmounted(() => {
       </main>
 
       <DownloadQueue
+        v-if="!isMaterialsTab"
         :items="queue"
         :busy="busy"
         :paused="paused"
