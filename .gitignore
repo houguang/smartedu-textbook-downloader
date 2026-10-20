@@ -22,3 +22,10 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
+
+.env.submit
+.env*.local
+
+
+releases/
+

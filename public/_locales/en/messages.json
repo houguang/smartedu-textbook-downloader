@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "SmartEdu Textbook Downloader",
+    "description": "Extension display name"
+  },
+  "extensionDescription": {
+    "message": "Filter by category and batch-download electronic textbooks and course PDFs from the Smart Education platform. Online preview supported. For personal learning only.",
+    "description": "Extension store description"
+  },
+  "actionTitle": {
+    "message": "Open textbook downloader",
+    "description": "Browser action tooltip"
+  }
+}

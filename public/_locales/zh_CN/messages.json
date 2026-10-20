@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "智慧教育平台教材下载",
+    "description": "Extension display name"
+  },
+  "extensionDescription": {
+    "message": "按分类筛选并批量下载智慧教育平台电子教材与课程教学 PDF，支持在线预览，仅供个人学习。",
+    "description": "Extension store description"
+  },
+  "actionTitle": {
+    "message": "打开教材下载",
+    "description": "Browser action tooltip"
+  }
+}

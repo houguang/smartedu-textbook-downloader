@@ -10,9 +10,10 @@ export default defineConfig({
     plugins: [tailwindcss()],
   }),
   manifest: {
-    name: "智慧教育平台教材下载",
-    description: "按分类筛选并批量下载智慧教育平台电子教材与课程教学 PDF，支持在线预览，仅供个人学习。",
-    version: "0.1.31",
+    name: "__MSG_extensionName__",
+    description: "__MSG_extensionDescription__",
+    default_locale: "zh_CN",
+    version: "0.1.32",
     permissions: ["storage", "downloads", "tabs"],
     host_permissions: [
       "https://basic.smartedu.cn/*",
@@ -21,7 +22,7 @@ export default defineConfig({
       "https://*.ykt.cbern.com.cn/*",
     ],
     action: {
-      default_title: "打开教材下载",
+      default_title: "__MSG_actionTitle__",
       default_icon: {
         16: "icon/16.png",
         32: "icon/32.png",
