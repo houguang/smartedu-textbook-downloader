@@ -6,6 +6,12 @@ Chrome 扩展：在独立 Options 页面按学段、年级、学科、版本浏�
 
 基于 [WXT](https://wxt.dev) + Vue 3 + Tailwind CSS。下载原理参考 [tchMaterial-parser](https://github.com/happycola233/tchMaterial-parser)：读取平台公开的教材目录 JSON，再用登录后的 `X-ND-AUTH` 从私有 CDN 拉取 PDF / 配套音频。
 
+## 商店安装
+
+- [Chrome 网上应用店](https://chromewebstore.google.com/detail/kelaaeiakeloimbllmnfinbanbljimee)
+- [Firefox 附加组件](https://addons.mozilla.org/addon/%E6%99%BA%E6%85%A7%E6%95%99%E8%82%B2%E5%B9%B3%E5%8F%B0%E6%95%99%E6%9D%90%E4%B8%8B%E8%BD%BD/)
+- [Microsoft Edge 扩展](https://microsoftedge.microsoft.com/addons/detail/pfjbeiflbihgkhfliblglfcjfdponbhh)
+
 ## 截图
 
 主界面：按分类筛选教材、勾选后批量下载，支持在线查看。
